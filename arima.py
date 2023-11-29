@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from sklearn.metrics import mean_squared_error
 
 def fit_ar_model(data, p):
     """
@@ -76,33 +79,58 @@ data = pd.read_csv('data_daily.csv', parse_dates=['# Date'], index_col='# Date')
 # forecast_df.index = pd.date_range(start=data.index[-1], periods=future_steps + 1, freq='D')[1:]
 # forecast_df.to_csv('forecasted_values.csv')
 
+# Optional: Generate ACF and PACF plots if you want to visually inspect
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plot_acf(data['Receipt_Count'], ax=plt.gca(), lags=40)
+plt.subplot(122)
+plot_pacf(data['Receipt_Count'], ax=plt.gca(), lags=40)
+#plt.show()
 
-# Specify the parameters for the ARIMA model
-p = 1  # Order of the AR part
-q = 2  # Order of the MA part
-d = 0  # Differencing order (change it if your data is differenced)
+# Split the data into training and test sets
+train_data = data[data.index < '2021-12-30']
+test_data = data[data.index >= '2021-12-01']
 
-# Fit the ARIMA model
-model = sm.tsa.ARIMA(data['Receipt_Count'], order=(p, d, q))
+# Find the best 'q' value based on AIC (using training data)
+best_aic = np.inf
+best_q = 0
+p = 1 # Assuming you've determined p is 1
+d = 0 # Differencing order
+
+for q in range(5):  # Testing q values from 0 to 4
+    try:
+        model = sm.tsa.ARIMA(train_data['Receipt_Count'], order=(p, d, q))
+        results = model.fit()
+        if results.aic < best_aic:
+            best_aic = results.aic
+            best_q = q
+    except:  # Handle cases where the model fails to converge
+        continue
+
+print(f"Best q value: {best_q} with AIC: {best_aic}")
+
+# Fit the ARIMA model with the best 'q' value found
+model = sm.tsa.ARIMA(train_data['Receipt_Count'], order=(p, d, 2))
 results = model.fit()
 
-# Forecast future values
-future_steps = 12
-forecast_output = results.forecast(steps=future_steps)
-
-print("Forecast Output:")
-print(forecast_output)
+# # Forecast future values
+forecast_steps = len(test_data)
+forecast_output = results.forecast(steps=forecast_steps)
 
 # Convert the forecast output into a DataFrame
 forecast_df = pd.DataFrame(forecast_output)
-# Print the DataFrame to ensure it's correctly formed
-print("\nForecast DataFrame:")
-print(forecast_df)
-# Optionally, if you want to rename the column
+forecast_df.columns = ['Forecasted_Value']
+# Evaluate the model
+mse = mean_squared_error(test_data['Receipt_Count'], forecast_output)
+print(f"Mean Squared Error: {mse}")
+forecast_df.to_csv('forecasted_values.csv')
+
+future_steps = 90
+forecast_output = results.forecast(steps=future_steps)
+
+# Convert the forecast output into a DataFrame
+forecast_df = pd.DataFrame(forecast_output)
 forecast_df.columns = ['Forecasted_Value']
 
 # Export to CSV
-forecast_df.to_csv('forecasted_values.csv')
-
-
-
+forecast_df.to_csv('forecasted_values2.csv')
