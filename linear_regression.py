@@ -1,38 +1,71 @@
 import pandas as pd
-import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import joblib
 
 # Load and preprocess the data
-data = pd.read_csv('data_daily.csv', parse_dates=['# Date'], index_col='# Date')
+data = pd.read_csv('data_daily.csv')
+data['Date'] = pd.to_datetime(data['Date'])
+data.set_index('Date', inplace=True)
+monthly_data = data.resample('M').sum()
 
-# Aggregate data to monthly
-data_monthly = data['Receipt_Count'].resample('M').sum()
+# Feature Engineering
+monthly_data['Month'] = monthly_data.index.month
 
-# Prepare the input features (X) and target variable (y)
-data_monthly = data_monthly.reset_index()
-data_monthly['Time_Index'] = np.arange(len(data_monthly))
-X = np.column_stack((np.ones(len(data_monthly)), data_monthly['Time_Index']))  # Adding a column for the intercept
-y = data_monthly['Receipt_Count'].values
+# Splitting the data
+X = monthly_data[['Month']]  # Features
+y = monthly_data['Receipt_Count']  # Target
 
-# Calculate the coefficients using OLS formula
-coefficients = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+# Using first 9 months for training, last 3 months for testing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=3, shuffle=False)
 
-# Making predictions for 2022 (12 months)
-future_time_index = np.column_stack((np.ones(12), np.arange(len(data_monthly), len(data_monthly) + 12)))
-future_predictions = future_time_index.dot(coefficients)
+# Train the Linear Regression model
+lin_reg = LinearRegression()
+lin_reg.fit(X_train, y_train)
 
-# Creating a DataFrame for the forecasted values
-forecast_dates = pd.date_range(start=data_monthly['# Date'].iloc[-1] + pd.DateOffset(months=1), periods=12, freq='M')
-forecast_df = pd.DataFrame({'Date': forecast_dates, 'Forecasted_Receipts': future_predictions})
+# Predict for the test set
+y_pred = lin_reg.predict(X_test)
 
-# Plotting the actual data and the forecast
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+mae = mean_absolute_error(y_test, y_pred)
+print(f"Mean Squared Error: {mse}")
+print(f"Mean Absolute Error: {mae}")
+
+# Plotting the results
 plt.figure(figsize=(12, 6))
-plt.plot(data_monthly['# Date'], y, label='Actual Monthly Receipts')
-plt.plot(forecast_dates, future_predictions, label='Forecasted Receipts', color='red')
+plt.plot(monthly_data.index, y, label='Actual Monthly Receipts', marker='o')
+plt.plot(X_test.index, y_pred, label='Predicted Receipts (Test Data)', marker='x', linestyle='dashed')
+
+plt.title('Linear Regression: Actual vs Predicted Receipts')
 plt.xlabel('Date')
 plt.ylabel('Receipts')
-plt.title('Monthly Receipts Forecast for 2022')
+plt.xticks(rotation=45)
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 plt.legend()
+plt.tight_layout()
 plt.show()
 
-forecast_df
+# January corresponds to the month number 1
+january_2022 = pd.DataFrame({'Month': [1]})
+january_2022_forecast = lin_reg.predict(january_2022)[0]
+print(f"January 2022 forecast: {january_2022_forecast}")
+
+plt.figure(figsize=(12, 6))
+plt.plot(monthly_data.index, y, label='Actual Monthly Receipts', marker='o')
+plt.plot(X_test.index, y_pred, label='Predicted Receipts (Test Data)', marker='x', linestyle='dashed')
+
+plt.title('Linear Regression: Actual vs Predicted Receipts')
+plt.xlabel('Date')
+plt.ylabel('Receipts')
+plt.xticks(rotation=45)
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Save the model
+joblib.dump(lin_reg, 'model/linear_regression_model.pkl')
