@@ -199,4 +199,16 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
+# Save the model
 residual_model.save('model/lstm_model.h5')
+
+
+final_predictions = pd.DataFrame({
+    'Date': validation_data.index,
+    'Predicted Receipts': final_predictions.flatten()
+})
+
+final_predictions.to_csv('data/final_lstm_predictions.csv')
+
+
+

@@ -65,3 +65,10 @@ plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 plt.legend()
 plt.tight_layout()
 plt.show()
+
+combined_predictions = pd.DataFrame({
+    'Date': validation_data.index,
+    'Predicted Receipts': combined_predictions
+})
+
+combined_predictions.to_csv('data/combined_predictions.csv')

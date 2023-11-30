@@ -62,7 +62,7 @@ def forecast_arima(data, ar_coefficients, ma_coefficients, p, q, steps):
     return forecast
 
 # Load and preprocess your data
-data = pd.read_csv('data_daily.csv', parse_dates=['# Date'], index_col='# Date')
+data = pd.read_csv('data_daily.csv', parse_dates=['Date'], index_col='Date')
 
 # Aggregate data to monthly
 data_monthly = data['Receipt_Count'].resample('M').sum()

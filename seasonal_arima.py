@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-data = pd.read_csv('data_daily.csv', parse_dates=['# Date'], index_col='# Date')
+data = pd.read_csv('data_daily.csv', parse_dates=['Date'], index_col='Date')
 
 # Decompose the time series to observe any seasonal patterns
 decomposition = seasonal_decompose(data['Receipt_Count'], model='additive', period=1)
@@ -18,7 +18,7 @@ data_new = pd.read_csv('data_daily.csv')
 
 # Convert the 'Date' column to datetime and sort by date
 data_new['# Date'] = pd.to_datetime(data_new['# Date'])
-data_new.sort_values('# Date', inplace=True)
+data_new.sort_values('Date', inplace=True)
 
 # Calculate the differences to find potential spikes (large increases or decreases)
 data_new['Diff'] = data_new['Receipt_Count'].diff().abs()

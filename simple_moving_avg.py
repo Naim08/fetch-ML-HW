@@ -4,7 +4,7 @@ from sklearn.metrics import mean_squared_error
 import numpy as np
 
 # Load your CSV data
-data = pd.read_csv('data_daily.csv', parse_dates=['# Date'], index_col='# Date')
+data = pd.read_csv('data_daily.csv', parse_dates=['Date'], index_col='Date')
 
 train_data = data[data.index < '2021-10-01']
 test_data = data[data.index >= '2021-10-01']
