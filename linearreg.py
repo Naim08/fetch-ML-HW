@@ -41,6 +41,7 @@ future_predictions = model.predict(future_time_index.reshape(-1, 1))
 # Optional: Plot the results
 plt.figure(figsize=(12, 6))
 plt.plot(data['Receipt_Count'], label='Original Data')
+
 plt.plot(future_time_index, future_predictions, label='Forecasted Values')
 plt.legend()
 plt.show()
