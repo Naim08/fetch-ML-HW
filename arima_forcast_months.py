@@ -1,3 +1,5 @@
+
+
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -62,44 +64,23 @@ def forecast_arima(data, ar_coefficients, ma_coefficients, p, q, steps):
 # Load and preprocess your data
 data = pd.read_csv('data_daily.csv', parse_dates=['# Date'], index_col='# Date')
 
-# Assuming data is already preprocessed (e.g., differenced if needed)
-# p = 2  # Order of the AR part
-# q = 2  # Order of the MA part
-# ar_coefficients = fit_ar_model(data['Receipt_Count'], p)
-# ma_coefficients = np.random.rand(q)  # Placeholder for MA coefficients
+# Aggregate data to monthly
+data_monthly = data['Receipt_Count'].resample('M').sum()
 
-# # Forecast future values
-# future_steps = 12
-# forecasted_values = forecast_arima(data['Receipt_Count'], ar_coefficients, ma_coefficients, p, q, future_steps)
+# Split the data into training and test sets (adjust dates accordingly)
+train_data = data_monthly[data_monthly.index < '2021-10-01']
+test_data = data_monthly[data_monthly.index >= '2021-10-01']
 
-# # Convert the forecasted values to a DataFrame
-# forecast_df = pd.DataFrame(forecasted_values, columns=['Forecasted_Value'])
-
-
-# forecast_df.index = pd.date_range(start=data.index[-1], periods=future_steps + 1, freq='D')[1:]
-# forecast_df.to_csv('forecasted_values.csv')
-
-# Optional: Generate ACF and PACF plots if you want to visually inspect
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plot_acf(data['Receipt_Count'], ax=plt.gca(), lags=40)
-plt.subplot(122)
-plot_pacf(data['Receipt_Count'], ax=plt.gca(), lags=40)
-#plt.show()
-
-# Split the data into training and test sets
-train_data = data[data.index < '2021-12-30']
-test_data = data[data.index >= '2021-12-01']
-
-# Find the best 'q' value based on AIC (using training data)
+# Assuming p and d values are already determined
+p = 1  # Order of the AR part
+d = 0  # Differencing order
 best_aic = np.inf
 best_q = 0
-p = 1 # Assuming you've determined p is 1
-d = 0 # Differencing order
 
-for q in range(5):  # Testing q values from 0 to 4
+# Find the best 'q' value based on AIC
+for q in range(10):  # Testing q values from 0 to 9
     try:
-        model = sm.tsa.ARIMA(train_data['Receipt_Count'], order=(p, d, q))
+        model = sm.tsa.ARIMA(train_data, order=(p, d, q))
         results = model.fit()
         if results.aic < best_aic:
             best_aic = results.aic
@@ -110,27 +91,37 @@ for q in range(5):  # Testing q values from 0 to 4
 print(f"Best q value: {best_q} with AIC: {best_aic}")
 
 # Fit the ARIMA model with the best 'q' value found
-model = sm.tsa.ARIMA(train_data['Receipt_Count'], order=(p, d, 2))
+model = sm.tsa.ARIMA(train_data, order=(p, d, best_q))
 results = model.fit()
 
-# # Forecast future values
 forecast_steps = len(test_data)
 forecast_output = results.forecast(steps=forecast_steps)
 
-# Convert the forecast output into a DataFrame
-forecast_df = pd.DataFrame(forecast_output)
-forecast_df.columns = ['Forecasted_Value']
+
+
 # Evaluate the model
-mse = mean_squared_error(test_data['Receipt_Count'], forecast_output)
+mse = mean_squared_error(test_data, forecast_output)
 print(f"Mean Squared Error: {mse}")
-forecast_df.to_csv('forecasted_values.csv')
+rmse = np.sqrt(mse)
+print(f"Root Mean Squared Error: {rmse}")
 
-future_steps = 90
-forecast_output = results.forecast(steps=future_steps)
+# Plotting the results
+plt.figure(figsize=(12, 6))
+plt.plot(train_data, label='Training Data')
+plt.plot(test_data, label='Test Data')
+plt.plot(test_data.index, forecast_output, label='Forecast', color='red')
+plt.legend()
+plt.show()
 
-# Convert the forecast output into a DataFrame
+# Export forecast to CSV (if needed)
+
+# Align forecast output with the corresponding dates
+forecast_dates = pd.date_range(start=train_data.index[-1], periods=forecast_steps + 1, freq='M')[1:]
+forecast_df = pd.DataFrame(forecast_output, index=forecast_dates, columns=['Forecasted_Value'])
+
 forecast_df = pd.DataFrame(forecast_output)
 forecast_df.columns = ['Forecasted_Value']
 
-# Export to CSV
-forecast_df.to_csv('forecasted_values2.csv')
+# Check the DataFrame before saving
+print("Forecast DataFrame:\n", forecast_df)
+forecast_df.to_csv('data/arima_monthly_forecasted_values.csv')
