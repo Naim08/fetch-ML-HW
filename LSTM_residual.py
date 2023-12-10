@@ -33,7 +33,7 @@ n_features = 1  # We are only using one feature
 
 generator = TimeseriesGenerator(scaled_train_data, scaled_train_data, length=n_input, batch_size=1)
 
-# Build the LSTM mode
+# Build the LSTM model
 model = Sequential()
 model.add(LSTM(100, activation='relu', input_shape=(n_input, n_features)))
 model.add(Dense(1))
