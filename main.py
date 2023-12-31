@@ -33,5 +33,5 @@ evaluate_model(validation_data['Receipt_Count'], final_predictions)
 # Plot the results
 plot_results(validation_data, final_predictions, 'Monthly Receipts: Actual vs Predicted (Including Residuals)')
 
-# Save the final predictions
+# Save the final
 save_predictions(validation_data, final_predictions, 'data/final_lstm_predictions.csv')
